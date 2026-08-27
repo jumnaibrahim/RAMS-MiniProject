@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAMS — Rapid Access Memory Store</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Syncopate:wght@700&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+ :root {
+    --bg-primary: #0a0a0a;
+    --bg-secondary: #111111;
+    --bg-card: #181818;
+    --bg-input: #0e0e0e;
+    --border: #2a1f1a;
+    --text-primary: #ede8e6;
+    --text-secondary: #8a7570;
+    --text-muted: #4a3830;
+    --accent: #9f6454;
+    --accent-glow: rgba(159, 100, 84, 0.15);
+    --accent-dim: rgba(159, 100, 84, 0.08);
+    --success: #34d399;
+    --warning: #fbbf24;
+    --error: #f87171;
+    --radius: 10px;
+}
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== HEADER ===== */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-secondary);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+ .logo {
+    font-family: 'Syncopate', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 8px;
+}
+
+  .logo-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 400;
+    letter-spacing: 0.5px;
+  }
+
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .status-badge.online {
+    background: rgba(159, 100, 84, 0.1);
+    color: var(--accent);
+    border: 1px solid rgba(159, 100, 84, 0.25);
+}
+
+  .status-badge.offline {
+    background: rgba(248, 113, 113, 0.1);
+    color: var(--error);
+    border: 1px solid rgba(248, 113, 113, 0.25);
+  }
+
+  .pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .pulse.off {
+    background: var(--error);
+    animation: none;
+  }
+
+ @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(159, 100, 84, 0.4); }
+    50% { opacity: 0.7; box-shadow: 0 0 0 8px rgba(159, 100, 84, 0); }
+}
+
+  /* ===== STATS BAR ===== */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    padding: 24px 32px;
+  }
+
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--accent);
+    opacity: 0.5;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .stat-unit {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 400;
+    margin-left: 4px;
+  }
+
+  /* ===== MAIN GRID ===== */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 0 32px 24px;
+  }
+
+  .panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .panel-title {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+  }
+
+  .panel-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--accent-dim);
+    color: var(--accent);
+  }
+
+  /* ===== CONSOLE ===== */
+  .console-body {
+    padding: 0;
+    height: 360px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .console-output {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+  }
+
+  .console-output::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .console-output::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .console-output::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+
+  .console-line {
+    display: flex;
+    gap: 8px;
+  }
+
+  .console-prompt {
+    color: var(--accent);
+    user-select: none;
+    flex-shrink: 0;
+  }
+
+  .console-cmd {
+    color: var(--text-primary);
+  }
+
+  .console-response {
+    color: var(--success);
+    padding-left: 24px;
+  }
+
+  .console-error {
+    color: var(--error);
+    padding-left: 24px;
+  }
+
+  .console-input-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-input);
+    gap: 8px;
+  }
+
+  .console-input-row .prompt-symbol {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    user-select: none;
+    flex-shrink: 0;
+  }
+
+  .console-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text-primary);
+    caret-color: var(--accent);
+  }
+
+  .console-input::placeholder {
+    color: var(--text-muted);
+  }
+
+  /* ===== KEY EXPLORER ===== */
+  .key-table-container {
+    height: 360px;
+    overflow-y: auto;
+  }
+
+  .key-table-container::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .key-table-container::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+
+  .key-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .key-table thead {
+    position: sticky;
+    top: 0;
+    background: var(--bg-card);
+    z-index: 1;
+  }
+
+  .key-table th {
+    text-align: left;
+    padding: 12px 20px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .key-table td {
+    padding: 10px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    border-bottom: 1px solid rgba(30, 42, 66, 0.5);
+  }
+
+  .key-table tr:hover td {
+    background: var(--accent-dim);
+  }
+
+  .key-name {
+    color: var(--accent);
+  }
+
+  .key-value {
+    color: var(--text-primary);
+  }
+
+  .key-ttl {
+    color: var(--warning);
+  }
+
+  .key-ttl.no-expiry {
+    color: var(--text-muted);
+  }
+
+  .empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 360px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  /* ===== LOGS ===== */
+  .logs-section {
+    padding: 0 32px 32px;
+  }
+
+  .logs-body {
+    height: 200px;
+    overflow-y: auto;
+    padding: 16px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.8;
+  }
+
+  .logs-body::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .logs-body::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+
+  .log-entry {
+    display: flex;
+    gap: 12px;
+  }
+
+  .log-time {
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .log-msg {
+    color: var(--text-secondary);
+  }
+
+  .log-msg.set { color: var(--accent); }
+  .log-msg.get { color: var(--success); }
+  .log-msg.del { color: var(--error); }
+  .log-msg.expire { color: var(--warning); }
+
+  /* ===== QUICK ACTIONS ===== */
+  .actions-bar {
+    display: flex;
+    gap: 10px;
+    padding: 0 32px 16px;
+  }
+
+  .action-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .action-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .action-btn.danger:hover {
+    border-color: var(--error);
+    color: var(--error);
+    background: rgba(248, 113, 113, 0.08);
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 768px) {
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    .main-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div>
+      <div class="logo">RAMS</div>
+      <div class="logo-sub">Rapid Access Memory Store</div>
+    </div>
+  </div>
+  <div class="status-badge online" id="statusBadge">
+    <div class="pulse" id="statusPulse"></div>
+    <span id="statusText">ONLINE</span>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-bar" style="grid-template-columns: repeat(5, 1fr);">
+  <div class="stat-card">
+    <div class="stat-label">Total Keys</div>
+    <div class="stat-value" id="totalKeys">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">TCP Clients</div>
+    <div class="stat-value" id="tcpClients">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">HTTP Sessions</div>
+    <div class="stat-value" id="httpSessions">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Operations</div>
+    <div class="stat-value" id="totalOps">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Uptime</div>
+    <div class="stat-value" id="uptime">0<span class="stat-unit">s</span></div>
+  </div>
+</div>
+
+<!-- QUICK ACTIONS -->
+<div class="actions-bar">
+  <button class="action-btn" onclick="quickCommand('KEYS')">List All Keys</button>
+  <button class="action-btn" onclick="runBenchmark()">Run Benchmark</button>
+  <button class="action-btn danger" onclick="clearConsole()">Clear Console</button>
+</div>
+<!-- CLIENT SIMULATOR -->
+<div style="padding: 0 32px 16px;">
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Client Simulator</span>
+      <span class="panel-badge">Simulates concurrent clients</span>
+    </div>
+    <div style="padding: 16px 20px; display:flex; flex-direction:column; gap:12px;">
+
+      <!-- Client A -->
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-family:'JetBrains Mono',monospace; font-size:12px;
+                     color:#9f6454; background:rgba(159,100,84,0.1);
+                     border:1px solid rgba(159,100,84,0.25);
+                     padding:6px 12px; border-radius:6px; width:100px; text-align:center;">
+          Client-A
+        </span>
+        <input type="text" id="cmdA" placeholder="SET key value"
+               style="flex:1; background:var(--bg-input); border:1px solid var(--border);
+                      border-radius:6px; padding:8px 12px; color:var(--text-primary);
+                      font-family:'JetBrains Mono',monospace; font-size:12px; outline:none;"
+               onkeydown="if(event.key==='Enter') sendClientCommand('Client-A','cmdA','responseA')">
+        <button onclick="sendClientCommand('Client-A','cmdA','responseA')"
+                class="action-btn">Send</button>
+        <span id="responseA" style="font-family:'JetBrains Mono',monospace;
+                                    font-size:12px; color:var(--success);
+                                    min-width:80px;"></span>
+      </div>
+
+      <!-- Client B -->
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-family:'JetBrains Mono',monospace; font-size:12px;
+                     color:#34d399; background:rgba(52,211,153,0.1);
+                     border:1px solid rgba(52,211,153,0.25);
+                     padding:6px 12px; border-radius:6px; width:100px; text-align:center;">
+          Client-B
+        </span>
+        <input type="text" id="cmdB" placeholder="GET key"
+               style="flex:1; background:var(--bg-input); border:1px solid var(--border);
+                      border-radius:6px; padding:8px 12px; color:var(--text-primary);
+                      font-family:'JetBrains Mono',monospace; font-size:12px; outline:none;"
+               onkeydown="if(event.key==='Enter') sendClientCommand('Client-B','cmdB','responseB')">
+        <button onclick="sendClientCommand('Client-B','cmdB','responseB')"
+                class="action-btn">Send</button>
+        <span id="responseB" style="font-family:'JetBrains Mono',monospace;
+                                    font-size:12px; color:var(--success);
+                                    min-width:80px;"></span>
+      </div>
+
+      <!-- Client C -->
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-family:'JetBrains Mono',monospace; font-size:12px;
+                     color:#fbbf24; background:rgba(251,191,36,0.1);
+                     border:1px solid rgba(251,191,36,0.25);
+                     padding:6px 12px; border-radius:6px; width:100px; text-align:center;">
+          Client-C
+        </span>
+        <input type="text" id="cmdC" placeholder="DEL key"
+               style="flex:1; background:var(--bg-input); border:1px solid var(--border);
+                      border-radius:6px; padding:8px 12px; color:var(--text-primary);
+                      font-family:'JetBrains Mono',monospace; font-size:12px; outline:none;"
+               onkeydown="if(event.key==='Enter') sendClientCommand('Client-C','cmdC','responseC')">
+        <button onclick="sendClientCommand('Client-C','cmdC','responseC')"
+                class="action-btn">Send</button>
+        <span id="responseC" style="font-family:'JetBrains Mono',monospace;
+                                    font-size:12px; color:var(--success);
+                                    min-width:80px;"></span>
+      </div>
+
+    </div>
+  </div>
+</div>
+<!-- MAIN GRID -->
+<div class="main-grid">
+
+  <!-- CONSOLE -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Command Console</span>
+      <span class="panel-badge">TCP :1234</span>
+    </div>
+    <div class="console-body">
+      <div class="console-output" id="consoleOutput">
+        <div class="console-response" style="color: var(--text-muted);">Welcome to RAMS. Type a command below.</div>
+      </div>
+      <div class="console-input-row">
+        <span class="prompt-symbol">rams&gt;</span>
+        <input type="text" class="console-input" id="commandInput"
+               placeholder="SET key value" autocomplete="off"
+               onkeydown="if(event.key==='Enter') sendCommand()">
+      </div>
+    </div>
+  </div>
+
+  <!-- KEY EXPLORER -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Key Explorer</span>
+      <span class="panel-badge" id="keyCount">0 keys</span>
+    </div>
+    <div class="key-table-container" id="keyTableContainer">
+      <div class="empty-state" id="emptyState">No keys stored yet</div>
+      <table class="key-table" id="keyTable" style="display:none;">
+        <thead>
+          <tr>
+            <th>Key</th>
+            <th>Value</th>
+            <th>TTL</th>
+          </tr>
+        </thead>
+        <tbody id="keyTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM GRID -->
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:0 32px 32px;">
+
+  <!-- SERVER LOGS -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Server Logs</span>
+      <span class="panel-badge" id="logCount">0 entries</span>
+    </div>
+    <div class="logs-body" id="logsBody"></div>
+  </div>
+
+  <!-- LIVE CLIENT ACTIVITY -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Live Client Activity</span>
+      <span class="panel-badge" id="activityCount">0 events</span>
+    </div>
+    <div class="logs-body" id="activityBody">
+      <div style="color: var(--text-muted); font-size:12px; font-family:'JetBrains Mono',monospace;">
+        Waiting for activity...
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const API = 'http://localhost:8080';
+  let logEntries = 0;
+  let commandHistory = [];
+  let historyIndex = -1;
+
+  // send command to server
+  async function sendCommand() {
+    const input = document.getElementById('commandInput');
+    const cmd = input.value.trim();
+    if (!cmd) return;
+
+    // add to history
+    commandHistory.unshift(cmd);
+    historyIndex = -1;
+
+    // show command in console
+    appendConsole('cmd', cmd);
+    input.value = '';
+
+    try {
+      const res = await fetch(API + '/api/command', {
+        method: 'POST',
+        body: cmd
+      });
+      const data = await res.json();
+
+      // show response
+      if (data.response.startsWith('ERROR')) {
+        appendConsole('error', data.response);
+      } else {
+        appendConsole('response', data.response);
+      }
+
+      // add to log
+      addLog(cmd, data.response);
+
+      // refresh stats and keys
+      fetchStats();
+      fetchKeys();
+
+    } catch (e) {
+      appendConsole('error', 'Connection failed — is the server running?');
+      setOffline();
+    }
+  }
+// send command as a named client
+async function sendClientCommand(clientName, inputId, responseId) {
+    const input = document.getElementById(inputId);
+    const responseEl = document.getElementById(responseId);
+    const cmd = input.value.trim();
+    if (!cmd) return;
+
+    responseEl.textContent = '...';
+    responseEl.style.color = 'var(--text-muted)';
+
+    try {
+        const res = await fetch(API + '/api/client-command', {
+            method: 'POST',
+            body: clientName + '|' + cmd
+        });
+        const data = await res.json();
+
+        responseEl.textContent = data.response;
+        responseEl.style.color = data.response.startsWith('ERROR')
+            ? 'var(--error)'
+            : 'var(--success)';
+
+        fetchStats();
+        fetchKeys();
+
+    } catch(e) {
+        responseEl.textContent = 'Connection failed';
+        responseEl.style.color = 'var(--error)';
+    }
+}
+  // quick command from button
+  function quickCommand(cmd) {
+    document.getElementById('commandInput').value = cmd;
+    sendCommand();
+  }
+
+  // simple benchmark from dashboard
+  async function runBenchmark() {
+    appendConsole('response', 'Running benchmark (100 SET + 100 GET)...');
+    const start = performance.now();
+    let success = 0;
+    let fail = 0;
+
+    try {
+      for (let i = 0; i < 100; i++) {
+        const setRes = await fetch(API + '/api/command', {
+          method: 'POST', body: 'SET bench_key_' + i + ' bench_val_' + i
+        });
+        const setData = await setRes.json();
+        if (setData.response === 'OK') success++; else fail++;
+
+        const getRes = await fetch(API + '/api/command', {
+          method: 'POST', body: 'GET bench_key_' + i
+        });
+        const getData = await getRes.json();
+        if (getData.response === 'bench_val_' + i) success++; else fail++;
+      }
+
+      const elapsed = (performance.now() - start).toFixed(0);
+      const ops = ((200 / elapsed) * 1000).toFixed(0);
+
+      appendConsole('response', '──────────────────────────────');
+      appendConsole('response', 'Benchmark Complete');
+      appendConsole('response', 'Commands  : 200 (100 SET + 100 GET)');
+      appendConsole('response', 'Successful: ' + success);
+      appendConsole('response', 'Failed    : ' + fail);
+      appendConsole('response', 'Time      : ' + elapsed + ' ms');
+      appendConsole('response', 'Ops/sec   : ' + ops);
+      appendConsole('response', '──────────────────────────────');
+
+      addLog('BENCHMARK', ops + ' ops/sec, ' + elapsed + 'ms');
+
+      // clean up benchmark keys
+      for (let i = 0; i < 100; i++) {
+        await fetch(API + '/api/command', {
+          method: 'POST', body: 'DEL bench_key_' + i
+        });
+      }
+
+      fetchStats();
+      fetchKeys();
+
+    } catch (e) {
+      appendConsole('error', 'Benchmark failed — server not responding');
+    }
+  }
+
+  // append to console output
+  function appendConsole(type, text) {
+    const output = document.getElementById('consoleOutput');
+    const div = document.createElement('div');
+
+    if (type === 'cmd') {
+      div.className = 'console-line';
+      div.innerHTML = '<span class="console-prompt">rams&gt;</span><span class="console-cmd">' + escapeHtml(text) + '</span>';
+    } else if (type === 'error') {
+      div.className = 'console-error';
+      div.textContent = text;
+    } else {
+      div.className = 'console-response';
+      div.textContent = text;
+    }
+
+    output.appendChild(div);
+    output.scrollTop = output.scrollHeight;
+  }
+
+  // add log entry
+  function addLog(cmd, response) {
+    const logsBody = document.getElementById('logsBody');
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+
+    const now = new Date();
+    const time = now.toLocaleTimeString('en-GB');
+
+    let msgClass = 'log-msg';
+    const op = cmd.split(' ')[0].toUpperCase();
+    if (op === 'SET') msgClass += ' set';
+    else if (op === 'GET') msgClass += ' get';
+    else if (op === 'DEL') msgClass += ' del';
+
+    div.innerHTML = '<span class="log-time">[' + time + ']</span>' +
+                    '<span class="' + msgClass + '">' + escapeHtml(cmd) + ' → ' + escapeHtml(response) + '</span>';
+
+    logsBody.appendChild(div);
+    logsBody.scrollTop = logsBody.scrollHeight;
+    logEntries++;
+    document.getElementById('logCount').textContent = logEntries + ' entries';
+  }
+
+  // fetch stats from server
+  async function fetchStats() {
+    try {
+      const res = await fetch(API + '/api/stats');
+      const data = await res.json();
+      document.getElementById('totalKeys').textContent = data.totalKeys;
+        document.getElementById('tcpClients').textContent = data.tcpClients;
+        document.getElementById('httpSessions').textContent = data.httpSessions;
+        document.getElementById('totalOps').textContent = data.totalOps;
+        formatUptime(data.uptime);
+        setOnline();
+    } catch (e) {
+      setOffline();
+    }
+  }
+
+  // fetch keys from server
+  async function fetchKeys() {
+    try {
+      const res = await fetch(API + '/api/keys');
+      const keys = await res.json();
+
+      const tbody = document.getElementById('keyTableBody');
+      const table = document.getElementById('keyTable');
+      const empty = document.getElementById('emptyState');
+
+      if (keys.length === 0) {
+        table.style.display = 'none';
+        empty.style.display = 'flex';
+      } else {
+        table.style.display = 'table';
+        empty.style.display = 'none';
+        tbody.innerHTML = '';
+        keys.forEach(k => {
+          const tr = document.createElement('tr');
+          const ttlClass = k.ttl === '-' ? 'key-ttl no-expiry' : 'key-ttl';
+          tr.innerHTML = '<td class="key-name">' + escapeHtml(k.key) + '</td>' +
+                         '<td class="key-value">' + escapeHtml(k.value) + '</td>' +
+                         '<td class="' + ttlClass + '">' + escapeHtml(k.ttl) + '</td>';
+          tbody.appendChild(tr);
+        });
+      }
+
+      document.getElementById('keyCount').textContent = keys.length + ' keys';
+
+    } catch (e) {
+      // silent fail
+    }
+  }
+
+  // format uptime
+  function formatUptime(seconds) {
+    const el = document.getElementById('uptime');
+    if (seconds < 60) {
+      el.innerHTML = seconds + '<span class="stat-unit">s</span>';
+    } else if (seconds < 3600) {
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      el.innerHTML = m + '<span class="stat-unit">m</span> ' + s + '<span class="stat-unit">s</span>';
+    } else {
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      el.innerHTML = h + '<span class="stat-unit">h</span> ' + m + '<span class="stat-unit">m</span>';
+    }
+  }
+
+  function setOnline() {
+    document.getElementById('statusBadge').className = 'status-badge online';
+    document.getElementById('statusPulse').className = 'pulse';
+    document.getElementById('statusText').textContent = 'ONLINE';
+  }
+
+  function setOffline() {
+    document.getElementById('statusBadge').className = 'status-badge offline';
+    document.getElementById('statusPulse').className = 'pulse off';
+    document.getElementById('statusText').textContent = 'OFFLINE';
+  }
+
+  function clearConsole() {
+    const output = document.getElementById('consoleOutput');
+    output.innerHTML = '<div class="console-response" style="color: var(--text-muted);">Console cleared.</div>';
+  }
+
+  function escapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  // command history with arrow keys
+  document.getElementById('commandInput').addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (historyIndex < commandHistory.length - 1) {
+        historyIndex++;
+        this.value = commandHistory[historyIndex];
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (historyIndex > 0) {
+        historyIndex--;
+        this.value = commandHistory[historyIndex];
+      } else {
+        historyIndex = -1;
+        this.value = '';
+      }
+    }
+  });
+
+// fetch activity log
+async function fetchActivity() {
+    try {
+        const res = await fetch(API + '/api/activity');
+        const entries = await res.json();
+        const body = document.getElementById('activityBody');
+
+        if (entries.length === 0) return;
+
+        body.innerHTML = '';
+        entries.slice().reverse().forEach(e => {
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+
+            let clientColor = 'var(--accent)';
+            if (e.client.startsWith('Client')) {
+                clientColor = '#34d399';
+            }
+
+            const op = e.command.split(' ')[0].toUpperCase();
+            let cmdColor = 'var(--text-secondary)';
+            if (op === 'SET') cmdColor = 'var(--accent)';
+            else if (op === 'GET') cmdColor = '#34d399';
+            else if (op === 'DEL') cmdColor = '#f87171';
+
+            div.innerHTML =
+                '<span class="log-time">[' + e.time + ']</span>' +
+                '<span style="color:' + clientColor + '; margin: 0 8px; font-family: JetBrains Mono, monospace; font-size:12px;">' + escapeHtml(e.client) + '</span>' +
+                '<span style="color:' + cmdColor + '; font-family: JetBrains Mono, monospace; font-size:12px;">' + escapeHtml(e.command) + '</span>' +
+                '<span style="color: var(--text-muted); margin: 0 6px;">→</span>' +
+                '<span style="color: var(--text-secondary); font-family: JetBrains Mono, monospace; font-size:12px;">' + escapeHtml(e.response) + '</span>';
+
+            body.appendChild(div);
+        });
+
+        document.getElementById('activityCount').textContent = entries.length + ' events';
+
+    } catch(e) {
+        // silent fail
+    }
+}
+
+// poll everything every 2 seconds
+setInterval(fetchStats, 2000);
+setInterval(fetchKeys, 2000);
+setInterval(fetchActivity, 2000);
+
+// initial fetch
+fetchStats();
+fetchKeys();
+fetchActivity();
+</script>
+</body>
+</html>

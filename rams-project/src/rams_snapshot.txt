@@ -1,0 +1,3 @@
+city=mysore
+month=january
+age=12
